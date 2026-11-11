@@ -1,0 +1,639 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Consolidado de resultados · Demo con datos ficticios</title>
+<style>
+:root{
+  color-scheme: light;
+  --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink2:#52514e; --muted:#898781;
+  --grid:#e1e0d9; --axis:#c3c2b7; --border:rgba(11,11,11,.10); --chip:#f0efec;
+  --s1:#2a78d6; --s1-soft:#86b6ef; --s2:#eb6834;
+  --pos:#2a78d6; --neg:#e34948; --up:#006300; --down:#d03b3b;
+  --good:#0ca30c; --warn:#fab219; --serious:#ec835a; --crit:#d03b3b;
+  --wash:rgba(42,120,214,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    color-scheme: dark;
+    --page:#0d0d0d; --surface:#1a1a19; --ink:#f0efec; --ink2:#c3c2b7; --muted:#898781;
+    --grid:#2c2c2a; --axis:#383835; --border:rgba(255,255,255,.10); --chip:#383835;
+    --s1:#3987e5; --s1-soft:#184f95; --s2:#d95926;
+    --pos:#3987e5; --neg:#e66767; --up:#0ca30c; --down:#e66767;
+    --wash:rgba(57,135,229,.14);
+  }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:14px/1.45 system-ui,-apple-system,"Segoe UI",sans-serif}
+button,select,textarea{font:inherit;color:inherit}
+.wrap{max-width:1240px;margin:0 auto;padding:0 20px 40px}
+.demo-band{background:var(--chip);color:var(--ink2);font-size:12.5px;text-align:center;padding:6px 12px}
+header.top{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 0 10px;flex-wrap:wrap}
+header.top h1{font-size:20px;margin:0;font-weight:650}
+header.top .sub{color:var(--ink2);font-size:13px}
+.filters{display:flex;gap:14px;align-items:center;flex-wrap:wrap;padding:10px 0 14px;border-bottom:1px solid var(--border)}
+.filters label{font-size:12.5px;color:var(--ink2);display:flex;align-items:center;gap:6px}
+select{background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:6px 8px}
+.seg{display:inline-flex;border:1px solid var(--border);border-radius:8px;overflow:hidden;background:var(--surface)}
+.seg button{border:0;background:none;padding:6px 10px;cursor:pointer;font-size:13px;color:var(--ink2)}
+.seg button[aria-pressed="true"]{background:var(--wash);color:var(--ink);font-weight:600}
+nav.tabs{display:flex;gap:4px;margin:14px 0 16px;flex-wrap:wrap}
+nav.tabs button{border:0;background:none;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--ink2);font-weight:550}
+nav.tabs button[aria-selected="true"]{background:var(--surface);color:var(--ink);box-shadow:0 0 0 1px var(--border)}
+nav.tabs .count{display:inline-block;min-width:18px;padding:0 5px;margin-left:6px;border-radius:9px;background:var(--chip);font-size:11.5px;text-align:center}
+.crumbs{display:flex;gap:6px;align-items:center;font-size:13px;color:var(--ink2);margin-bottom:12px;flex-wrap:wrap}
+.crumbs a{color:var(--s1);cursor:pointer;text-decoration:none}
+.crumbs a:hover{text-decoration:underline}
+.crumbs b{color:var(--ink)}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:16px}
+.card h2{font-size:14.5px;margin:0 0 2px;font-weight:620}
+.card .hint{color:var(--muted);font-size:12px;margin:0 0 10px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:14px}
+.tiles{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:14px}
+@media (max-width:980px){.tiles{grid-template-columns:repeat(2,1fr)}.grid2{grid-template-columns:1fr}}
+.tile{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;cursor:pointer}
+.tile:hover{box-shadow:0 0 0 2px var(--wash)}
+.tile .lbl{color:var(--ink2);font-size:12.5px}
+.tile .val{font-size:24px;font-weight:650;margin:2px 0}
+.tile .val small{font-size:12px;color:var(--muted);font-weight:500}
+.tile .dl{font-size:12.5px}
+.up{color:var(--up)} .down{color:var(--down)}
+.alertbar{display:flex;gap:10px;align-items:center;background:var(--surface);border:1px solid var(--border);border-left:4px solid var(--serious);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:13.5px}
+.alertbar a{color:var(--s1);cursor:pointer;margin-left:auto;white-space:nowrap}
+svg.chart{width:100%;height:auto;display:block;overflow:visible}
+svg .grid{stroke:var(--grid);stroke-width:1}
+svg .base{stroke:var(--axis);stroke-width:1}
+svg .tick{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+svg .lab{fill:var(--ink2);font-size:12px}
+svg .val{fill:var(--ink);font-size:12px;font-variant-numeric:tabular-nums}
+svg .bar{fill:var(--s1)}
+svg .bar-soft{fill:var(--s1-soft)}
+svg .prevtick{stroke:var(--ink2);stroke-width:2}
+svg .hit{fill:transparent;cursor:pointer}
+svg .row:hover .hit,svg .hitcol:hover .hit{fill:var(--wash)}
+svg .ln1{fill:none;stroke:var(--s1);stroke-width:2}
+svg .ln2{fill:none;stroke:var(--s2);stroke-width:2}
+svg .xh{stroke:var(--axis);stroke-width:1;opacity:0}
+svg .hitcol:hover .xh,svg .hitcol:focus .xh{opacity:1}
+svg .dot{opacity:0}
+svg .hitcol:hover .dot{opacity:1}
+svg .flag{fill:var(--crit);stroke:var(--surface);stroke-width:2}
+svg .flagtxt{fill:#fff;font-size:10px;font-weight:700}
+.legend{display:flex;gap:14px;font-size:12px;color:var(--ink2);margin:0 0 6px;flex-wrap:wrap}
+.legend i{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle;margin-right:5px}
+.legend i.sq{width:10px;height:10px;border-radius:3px}
+.legend i.tk{width:2px;height:12px;border-radius:0;background:var(--ink2)}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums}
+th,td{padding:6px 8px;text-align:right;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{font-size:12px;color:var(--ink2);font-weight:600}
+th:first-child,td:first-child{text-align:left}
+td.ind{padding-left:22px;color:var(--ink2)}
+tr.t1 td{font-weight:620}
+tr.t2 td{font-weight:700;border-top:1px solid var(--axis)}
+tr.pct td{color:var(--muted);font-size:12.5px}
+td.cell{cursor:pointer;position:relative}
+td.cell:hover{background:var(--wash)}
+td.cell.note::after{content:"";position:absolute;top:3px;right:2px;border-left:6px solid transparent;border-top:6px solid var(--s2)}
+td.cur{background:color-mix(in srgb,var(--wash) 50%,transparent)}
+tr.clk{cursor:pointer} tr.clk:hover td{background:var(--wash)}
+.tablewrap{overflow-x:auto}
+.st{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;white-space:nowrap}
+.st .ic{display:inline-grid;place-items:center;width:16px;height:16px;border-radius:50%;font-size:10.5px;font-weight:700;color:#fff}
+.st.ok .ic{background:var(--good)} .st.warn .ic{background:var(--warn);color:#0b0b0b} .st.fail .ic{background:var(--crit)} .st.serious .ic{background:var(--serious)}
+.btn{border:1px solid var(--border);background:var(--surface);border-radius:8px;padding:6px 12px;cursor:pointer}
+.btn.primary{background:var(--s1);color:#fff;border-color:transparent}
+.btn:hover{box-shadow:0 0 0 2px var(--wash)}
+.erpcards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:14px}
+@media (max-width:820px){.erpcards{grid-template-columns:1fr}}
+.erpcards .card h3{margin:0;font-size:15px}
+.erpcards .meta{color:var(--ink2);font-size:12.5px;margin-top:4px}
+.log{font:12.5px/1.6 ui-monospace,Consolas,monospace;background:var(--chip);border-radius:8px;padding:10px 12px;margin-top:12px;white-space:pre-wrap;max-height:220px;overflow:auto}
+.divbar{position:relative;height:12px;width:150px;display:inline-block;vertical-align:middle}
+.divbar::before{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--axis)}
+.divbar span{position:absolute;top:0;height:12px;border-radius:0 4px 4px 0}
+.divbar span.n{border-radius:4px 0 0 4px}
+.drawer{position:fixed;top:0;right:0;height:100%;width:min(560px,100%);background:var(--surface);box-shadow:-8px 0 30px rgba(0,0,0,.18);transform:translateX(105%);transition:transform .2s ease;z-index:20;overflow-y:auto;padding:18px 20px 30px}
+.drawer.open{transform:none}
+.drawer .x{position:absolute;top:12px;right:12px}
+.drawer h2{font-size:16px;margin:0 30px 2px 0}
+.drawer .big{font-size:28px;font-weight:650;margin:8px 0 2px}
+.drawer section{margin-top:18px}
+.drawer h3{font-size:13px;margin:0 0 6px;color:var(--ink2);font-weight:620;text-transform:uppercase;letter-spacing:.03em}
+.note-auto{background:var(--chip);border-radius:8px;padding:10px 12px;font-size:13px}
+.note-user{border-left:3px solid var(--s2);padding:6px 10px;margin:6px 0;font-size:13px}
+.note-user small{color:var(--muted)}
+textarea{width:100%;min-height:62px;border:1px solid var(--border);border-radius:8px;background:var(--page);padding:8px}
+#tip{position:fixed;z-index:30;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--border);box-shadow:0 4px 14px rgba(0,0,0,.15);border-radius:8px;padding:7px 10px;font-size:12.5px;font-variant-numeric:tabular-nums;max-width:280px}
+#tip b{font-weight:620}
+.muted{color:var(--muted)}
+.small{font-size:12.5px}
+footer{color:var(--muted);font-size:12px;margin-top:26px;text-align:center}
+.pill{display:inline-block;background:var(--chip);border-radius:10px;padding:1px 8px;font-size:12px;color:var(--ink2)}
+.unm td{background:color-mix(in srgb,var(--serious) 10%,transparent)}
+</style>
+</head>
+<body>
+<div class="demo-band">Demo con datos ficticios: 16 empresas, 7 áreas, 3 ERP. Nombres, cifras y asignaciones son ilustrativos.</div>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Consolidado de resultados del grupo</h1>
+      <div class="sub">Cifras en MM$ · Último cierre cargado: septiembre 2026</div>
+    </div>
+  </header>
+
+  <div class="filters" role="toolbar" aria-label="Filtros">
+    <label>Ver <select id="fScope"></select></label>
+    <label>Acumulado <select id="fCut"></select></label>
+    <label>Valores <span class="seg" id="fReal"><button data-v="0">Nominales</button><button data-v="1">Reales (IPC)</button></span></label>
+    <label>Operaciones entre empresas <span class="seg" id="fElim"><button data-v="1">Eliminar</button><button data-v="0">Incluir</button></span></label>
+  </div>
+
+  <nav class="tabs" role="tablist" id="tabs"></nav>
+  <main id="view"></main>
+  <footer>Maqueta de demostración. Todos los datos son ficticios y se generan en el navegador.</footer>
+</div>
+
+<aside class="drawer" id="drawer" aria-hidden="true" tabindex="-1"></aside>
+<div id="tip" hidden></div>
+
+<script>
+"use strict";
+/* ---------- utilidades ---------- */
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+const R=mulberry32(20261111);
+const noise=a=>1+(R()*2-1)*a;
+const nf0=new Intl.NumberFormat('es-CL',{maximumFractionDigits:0});
+const fmt=v=>(v<-0.5?'−':'')+nf0.format(Math.abs(Math.round(v)));
+const pct=v=>isFinite(v)?(v*100).toFixed(1).replace('.',',')+'%':'—';
+const dpct=(a,b)=>(b===0||!isFinite(b))?NaN:(a-b)/Math.abs(b);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const norm=a=>{const s=a.reduce((x,y)=>x+y,0);return a.map(v=>v/s)};
+function fmtAxis(v){const a=Math.abs(v);if(a>=1000){const k=a/1000;return (v<0?'−':'')+(Number.isInteger(k)?nf0.format(k):k.toFixed(1).replace('.',','))+' mil'}return fmt(v)}
+
+const MONTHS=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+const MONTHS_L=['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+const YEARS=[2022,2023,2024,2025,2026];
+const CUR=2026, LASTCLOSE=9;
+const IPC={2022:1.262,2023:1.148,2024:1.098,2025:1.042,2026:1};
+
+const AREAS=[
+  {id:'inm',name:'Inmobiliario'},{id:'res',name:'Restaurantes'},{id:'agr',name:'Agrícola'},
+  {id:'pac',name:'Packing'},{id:'exp',name:'Exportadora'},{id:'inv',name:'Inversiones'},{id:'ser',name:'Servicios'}];
+const ERPS={softland:'Softland',agrosoft:'Agrosoft',inet:'INet'};
+const ERP_SRC={softland:'Lectura directa de la base (solo lectura)',agrosoft:'Exportación programada del libro mayor',inet:'Archivo Excel del libro mayor'};
+const COMPANIES=[
+  {id:'andes',name:'Inmobiliaria Los Andes',area:'inm',erp:'softland',S:4200},
+  {id:'valle',name:'Rentas del Valle',area:'inm',erp:'softland',S:3100},
+  {id:'costanera',name:'Inmobiliaria Costanera',area:'inm',erp:'softland',S:2600},
+  {id:'centro',name:'Restaurantes Centro',area:'res',erp:'inet',S:3800},
+  {id:'bosque',name:'Trattoria del Bosque',area:'res',erp:'inet',S:2200},
+  {id:'sanpedro',name:'Agrícola San Pedro',area:'agr',erp:'agrosoft'},
+  {id:'santaelena',name:'Agrícola Santa Elena',area:'agr',erp:'agrosoft'},
+  {id:'robles',name:'Agrícola Los Robles',area:'agr',erp:'agrosoft'},
+  {id:'rancagua',name:'Packing Rancagua',area:'pac',erp:'agrosoft'},
+  {id:'pacifico',name:'Exportadora Pacífico Sur',area:'exp',erp:'agrosoft'},
+  {id:'cordillera',name:'Inversiones Cordillera',area:'inv',erp:'softland',S:1600},
+  {id:'maipo',name:'Inversiones Maipo',area:'inv',erp:'softland',S:1100},
+  {id:'aconcagua',name:'Capital Aconcagua',area:'inv',erp:'softland',S:900},
+  {id:'lagos',name:'Inversiones Los Lagos',area:'inv',erp:'softland',S:700},
+  {id:'compartidos',name:'Servicios Compartidos',area:'ser',erp:'inet',S:850},
+  {id:'logistica',name:'Logística Central',area:'ser',erp:'inet',S:1300}];
+const CBY=Object.fromEntries(COMPANIES.map(c=>[c.id,c]));
+const ABY=Object.fromEntries(AREAS.map(a=>[a.id,a]));
+
+const BASE=['ventas','cto','rem','arr','gb','imp','vig','ogav','dep','gfin','onop'];
+const ROWS=[
+  {k:'ventas',n:'Ventas'},{k:'cto',n:'Costo de venta'},{k:'mb',n:'Margen bruto',t:1},{k:'mbp',n:'Margen bruto %',p:'mb'},
+  {k:'rem',n:'Remuneraciones',ind:1},{k:'arr',n:'Arriendos',ind:1},{k:'gb',n:'Gastos básicos',ind:1},{k:'imp',n:'Impuestos y contribuciones',ind:1},
+  {k:'vig',n:'Vigilancia',ind:1},{k:'ogav',n:'Otros GAV',ind:1},{k:'dep',n:'Depreciación',ind:1},
+  {k:'gav',n:'Total GAV',t:1},{k:'gavp',n:'GAV %',p:'gav'},
+  {k:'ro',n:'Resultado operacional',t:1},{k:'rop',n:'Resultado operacional %',p:'ro'},
+  {k:'gfin',n:'Gastos financieros',ind:1},{k:'onop',n:'Otros ingresos y gastos',ind:1},{k:'rno',n:'Resultado no operacional',t:1},
+  {k:'rai',n:'Resultado antes de impuesto',t:2},{k:'ebitda',n:'EBITDA',t:2},{k:'ebitdap',n:'EBITDA %',p:'ebitda'}];
+const RN=Object.fromEntries(ROWS.map(r=>[r.k,r.n]));
+const COMPONENTS={mb:['ventas','cto'],gav:['rem','arr','gb','imp','vig','ogav','dep'],ro:['mb','gav'],rno:['gfin','onop'],rai:['ro','rno'],ebitda:['ro','dep']};
+
+/* ---------- generación de datos ficticios ---------- */
+const FLAT=Array(12).fill(1/12);
+const RES_SEAS=norm([.085,.08,.08,.078,.08,.078,.082,.08,.08,.085,.088,.114]);
+const PROFILE={
+  inm:{cto:.14,rem:.06,arr:0,gb:.03,imp:.07,vig:.03,ogav:.03,dep:.17,gfin:.11,onop:.01,g:1.05,season:FLAT},
+  res:{cto:.37,rem:.26,arr:.09,gb:.05,imp:.01,vig:.006,ogav:.06,dep:.04,gfin:.012,onop:.003,g:1.07,season:RES_SEAS},
+  agr:{cto:.58,rem:.07,arr:.01,gb:.02,imp:.006,vig:.004,ogav:.03,dep:.07,gfin:.03,onop:.004},
+  pac:{cto:.66,rem:.08,arr:.01,gb:.04,imp:.004,vig:.004,ogav:.02,dep:.06,gfin:.02,onop:.002},
+  exp:{cto:.86,rem:.02,arr:.002,gb:.003,imp:.001,vig:.001,ogav:.015,dep:.004,gfin:.012,onop:.006},
+  inv:{cto:.08,rem:.05,arr:.01,gb:.005,imp:.01,vig:0,ogav:.03,dep:.01,gfin:.06,onop:.12,g:1.03,season:FLAT},
+  ser:{cto:.18,rem:.46,arr:.05,gb:.03,imp:.005,vig:.01,ogav:.08,dep:.03,gfin:.01,onop:.002,g:1.06,season:FLAT}};
+const PRODUCTS={cer:'Cerezas',car:'Carozos',nue:'Nueces',man:'Manzanas',per:'Peras'};
+const PSEASON={
+  cer:[.30,0,0,0,0,0,0,0,0,0,.20,.50], car:[.45,.35,.05,0,0,0,0,0,0,0,0,.15],
+  nue:[0,0,.25,.45,.30,0,0,0,0,0,0,0], man:[0,.15,.35,.30,.15,.05,0,0,0,0,0,0], per:[.10,.35,.35,.15,.05,0,0,0,0,0,0,0]};
+const MIX={ /* toneladas/año base, MM$ por tonelada */
+  sanpedro:{cer:[520,4.6],nue:[300,3.2]},
+  santaelena:{man:[2400,.55],per:[1300,.6],car:[600,1.3]},
+  robles:{cer:[380,4.6],car:[450,1.3]},
+  rancagua:{cer:[3800,.38],car:[2600,.22],man:[5200,.12],nue:[1500,.15]},
+  pacifico:{cer:[2600,5.4],nue:[1600,3.6],man:[4800,.75],per:[2000,.8],car:[1900,1.6]}};
+const PF={};
+for(const p in PRODUCTS){let t=1,pr=1;PF[p]={};for(const y of YEARS){if(y>2022){t*=noise(.06);pr*=noise(.05)*1.03}PF[p][y]={t,p:pr}}}
+PF.cer[2026]={t:PF.cer[2025].t*.86,p:PF.cer[2025].p*.72};
+PF.nue[2026]={t:PF.nue[2025].t*1.17,p:PF.nue[2025].p*1.07};
+
+const DATA={}, PROD={};
+for(const c of COMPANIES){
+  const pr=PROFILE[c.area]; const isP=!!MIX[c.id]; c.prod=isP;
+  const Sb=isP?Object.values(MIX[c.id]).reduce((s,[t,p])=>s+t*p,0):c.S;
+  DATA[c.id]={};PROD[c.id]={};
+  YEARS.forEach((y,k)=>{
+    DATA[c.id][y]=[];PROD[c.id][y]=[];
+    const grow=Math.pow(1.045,k);
+    for(let m=0;m<12;m++){
+      const v={};
+      if(isP){
+        let sales=0,baseV=0;const pm={};
+        for(const p in MIX[c.id]){const [t0,p0]=MIX[c.id][p];const tons=t0*PF[p][y].t*PSEASON[p][m]*noise(.03);const val=tons*p0*PF[p][y].p;pm[p]={t:tons,v:val};sales+=val;baseV+=tons*p0*Math.pow(1.035,k)}
+        PROD[c.id][y][m]=pm;v.ventas=sales;v.cto=-pr.cto*baseV*noise(.03);
+        v.gb=-pr.gb*Sb*grow/12*noise(.05);v.ogav=-pr.ogav*Sb*grow/12*noise(.05);
+      }else{
+        v.ventas=c.S*Math.pow(pr.g,k)*pr.season[m]*noise(.04);v.cto=-pr.cto*v.ventas*noise(.03);
+        v.gb=-pr.gb*v.ventas*noise(.05);v.ogav=-pr.ogav*v.ventas*noise(.05);
+      }
+      v.rem=-pr.rem*Sb*grow/12*noise(.02);v.arr=-pr.arr*Sb*grow/12*noise(.01);v.imp=-pr.imp*Sb*grow/12*noise(.02);
+      v.vig=-pr.vig*Sb*grow/12*noise(.02);v.dep=-pr.dep*Sb*grow/12*noise(.005);v.gfin=-pr.gfin*Sb/12*noise(.06);
+      v.onop=pr.onop*Sb/12*(c.area==='inv'?(.4+R()*1.2):(R()*2-1));
+      DATA[c.id][y][m]=v;
+    }
+  });
+}
+/* operaciones entre empresas del grupo */
+const FLOWS=[
+  {id:'f1',seller:'valle',buyer:'centro',concept:'Arriendo de locales',sl:'ventas',bl:'arr',amt:(y,m)=>22*Math.pow(1.04,y-2022)},
+  {id:'f2',seller:'rancagua',buyer:'pacifico',concept:'Servicio de packing',sl:'ventas',bl:'cto',amt:(y,m)=>140*(PSEASON.cer[m]+PSEASON.car[m]+PSEASON.man[m])*Math.pow(1.05,y-2022)},
+  {id:'f3',seller:'cordillera',buyer:'costanera',concept:'Intereses por préstamo',sl:'onop',bl:'gfin',amt:(y,m)=>11},
+  {id:'f4',seller:'compartidos',buyer:'sanpedro',concept:'Servicios de administración',sl:'ventas',bl:'ogav',amt:(y,m)=>8*Math.pow(1.04,y-2022)}];
+for(const f of FLOWS)for(const y of YEARS)for(let m=0;m<12;m++){const a=f.amt(y,m);DATA[f.seller][y][m][f.sl]+=a;DATA[f.buyer][y][m][f.bl]-=a}
+/* errores de carga sembrados para la demo */
+const INJ={dup:[{c:'centro',y:2026,m:2}],empty:[{c:'robles',y:2026,m:7}],sign:[{c:'maipo',y:2025,m:5,l:'gfin'}]};
+for(const d of INJ.dup){const v=DATA[d.c][d.y][d.m];for(const l of BASE)v[l]*=2}
+for(const d of INJ.empty){const v=DATA[d.c][d.y][d.m];for(const l of BASE)v[l]=0;for(const p in PROD[d.c][d.y][d.m])PROD[d.c][d.y][d.m][p]={t:0,v:0}}
+for(const d of INJ.sign){DATA[d.c][d.y][d.m][d.l]*=-1}
+/* cuentas del ERP sin asignar a una línea del resumen */
+const UNMAPPED=[
+  {c:'aconcagua',code:'4-3-02-017',name:'Reajustes UF por cobrar',y:2026,m:3,amt:9,line:null},
+  {c:'aconcagua',code:'4-3-09-001',name:'Ajuste fluctuación sin clasificar',y:2026,m:5,amt:5,line:null}];
+
+/* plan de cuentas por ERP (equivalencia hacia el formato común) */
+const ACCN={ventas:['Ingresos por ventas','Otros ingresos de explotación'],cto:['Costo directo','Mano de obra directa'],rem:['Sueldos','Leyes sociales'],
+  arr:['Arriendos'],gb:['Energía eléctrica','Agua y gas'],imp:['Contribuciones','Patentes municipales'],vig:['Vigilancia'],ogav:['Asesorías','Gastos generales'],
+  dep:['Depreciación activo fijo'],gfin:['Intereses bancarios','Comisiones bancarias'],onop:['Diferencia de cambio','Otros ingresos y egresos']};
+const LCODE={ventas:41,cto:51,rem:61,arr:62,gb:63,imp:64,vig:65,ogav:66,dep:67,gfin:71,onop:72};
+function accCode(erp,line,i){const b=LCODE[line];
+  if(erp==='softland')return `${String(b)[0]}-${String(b)[1]}-0${i+1}-00${i+1}`;
+  if(erp==='agrosoft')return `${b}0${i+1}0${i+1}`;
+  return `${line.toUpperCase().slice(0,3)}-${String(100+i*10)}`}
+const ACCOUNTS={};
+for(const c of COMPANIES){ACCOUNTS[c.id]={};for(const l of BASE){const names=ACCN[l];const w=names.length===1?[1]:[.7+R()*.15];if(names.length>1)w.push(1-w[0]);
+  ACCOUNTS[c.id][l]=names.map((n,i)=>({code:accCode(c.erp,l,i),name:n,w:w[i]}))}}
+
+/* ---------- estado ---------- */
+const S={scope:{type:'group',id:'grupo'},cut:LASTCLOSE,real:false,elim:true,tab:'exec'};
+let NOTES={};try{NOTES=JSON.parse(localStorage.getItem('eerr-demo-notes')||'{}')}catch(e){}
+const saveNotes=()=>{try{localStorage.setItem('eerr-demo-notes',JSON.stringify(NOTES))}catch(e){}};
+
+/* ---------- cálculo ---------- */
+function compsIn(sc){if(sc.type==='group')return COMPANIES;if(sc.type==='area')return COMPANIES.filter(c=>c.area===sc.id);return [CBY[sc.id]]}
+function scopeName(sc){return sc.type==='group'?'Grupo consolidado':sc.type==='area'?ABY[sc.id].name:CBY[sc.id].name}
+function scopeKey(sc){return sc.type+':'+sc.id}
+function sumRange(sc,y,m0,m1,opt){
+  opt=opt||S;const ids=new Set(compsIn(sc).map(c=>c.id));const acc=Object.fromEntries(BASE.map(l=>[l,0]));
+  for(const id of ids)for(let m=m0;m<m1;m++){const v=DATA[id][y][m];for(const l of BASE)acc[l]+=v[l]}
+  for(const u of UNMAPPED)if(u.line&&ids.has(u.c)&&u.y===y&&u.m>=m0&&u.m<m1)acc[u.line]+=u.amt;
+  if(opt.elim)for(const f of FLOWS)if(ids.has(f.seller)&&ids.has(f.buyer))for(let m=m0;m<m1;m++){const a=f.amt(y,m);acc[f.sl]-=a;acc[f.bl]+=a}
+  if(opt.real)for(const l of BASE)acc[l]*=IPC[y];
+  return stmt(acc)}
+function stmt(b){const r={...b};r.mb=b.ventas+b.cto;r.gav=b.rem+b.arr+b.gb+b.imp+b.vig+b.ogav+b.dep;r.ro=r.mb+r.gav;r.rno=b.gfin+b.onop;r.rai=r.ro+r.rno;r.ebitda=r.ro-b.dep;
+  r.mbp=r.mb/b.ventas;r.gavp=r.gav/b.ventas;r.rop=r.ro/b.ventas;r.ebitdap=r.ebitda/b.ventas;return r}
+const ytd=(sc,y)=>sumRange(sc,y,0,S.cut);
+function children(sc){
+  if(sc.type==='group')return AREAS.map(a=>({type:'area',id:a.id}));
+  if(sc.type==='area')return compsIn(sc).map(c=>({type:'company',id:c.id}));
+  return []}
+function accountRows(cid,line,y){
+  const c=CBY[cid];const opt={...S,elim:false};
+  let total=sumRange({type:'company',id:cid},y,0,S.cut,opt)[line];
+  const extra=UNMAPPED.filter(u=>u.c===cid&&u.line===line&&u.y===y&&u.m<S.cut).map(u=>({code:u.code,name:u.name+' (asignada)',v:u.amt*(S.real?IPC[y]:1)}));
+  const ex=extra.reduce((s,e)=>s+e.v,0);
+  return ACCOUNTS[cid][line].map(a=>({code:a.code,name:a.name,v:(total-ex)*a.w})).concat(extra)}
+
+/* controles de carga */
+function controlsFor(c){
+  const out=[];
+  const empties=[];for(const y of YEARS)for(let m=0;m<(y===CUR?S.cut:12);m++){const v=DATA[c.id][y][m];if(BASE.every(l=>v[l]===0))empties.push(MONTHS[m]+' '+y)}
+  out.push({k:'per',label:'Períodos completos',st:empties.length?'fail':'ok',detail:empties.length?`${empties.join(', ')} sin movimientos: la carga de ese mes no llegó completa.`:''});
+  const d=INJ.dup.filter(x=>x.c===c.id&&(x.y<CUR||x.m<S.cut));
+  out.push({k:'dup',label:'Sin duplicados',st:d.length?'fail':'ok',detail:d.length?d.map(x=>`${MONTHS[x.m]} ${x.y}: el mismo período se cargó dos veces.`).join(' '):''});
+  const un=UNMAPPED.filter(u=>u.c===c.id&&!u.line);const unIn=un.filter(u=>u.y<CUR||u.m<S.cut);const diff=unIn.reduce((s,u)=>s+u.amt,0);
+  out.push({k:'may',label:'Cuadra con el mayor del ERP',st:diff?'fail':'ok',detail:diff?`Diferencia de MM$ ${fmt(diff)} contra el mayor: hay movimientos en cuentas que no están asignadas a ninguna línea.`:''});
+  out.push({k:'map',label:'Cuentas asignadas',st:un.length?'warn':'ok',detail:un.length?`${un.length} cuenta(s) del ERP sin línea asignada en la tabla de equivalencia.`:''});
+  const s=INJ.sign.filter(x=>x.c===c.id&&(x.y<CUR||x.m<S.cut));
+  out.push({k:'sig',label:'Signos coherentes',st:s.length?'warn':'ok',detail:s.length?s.map(x=>`${RN[x.l]} de ${MONTHS[x.m]} ${x.y} con signo contrario al habitual.`).join(' '):''});
+  return out}
+const RANK={ok:0,warn:1,fail:2};
+function companyStatus(c){return controlsFor(c).reduce((w,x)=>RANK[x.st]>RANK[w]?x.st:w,'ok')}
+function stHTML(st,label){const ic={ok:'✓',warn:'!',fail:'✕',serious:'!'}[st];return `<span class="st ${st}"><span class="ic" aria-hidden="true">${ic}</span>${esc(label)}</span>`}
+const ST_LABEL={ok:'Correcto',warn:'Revisar',fail:'No cuadra'};
+
+/* anomalías por comparación con el mismo mes de otros años */
+function detectAnomalies(){
+  const out=[];const LINES=BASE.filter(l=>l!=='onop');
+  for(const c of COMPANIES)for(const y of [2025,2026])for(let m=0;m<(y===CUR?S.cut:12);m++){
+    const hits=[];
+    for(const l of LINES){const v=DATA[c.id][y][m][l];const others=YEARS.filter(o=>o!==y).map(o=>DATA[c.id][o][m][l]).filter(x=>x!==0);
+      if(!others.length)continue;const mean=others.reduce((a,b)=>a+b,0)/others.length;const sd=Math.sqrt(others.reduce((a,b)=>a+(b-mean)**2,0)/others.length);
+      const diff=v-mean;if(Math.abs(diff)>Math.max(3*sd,.45*Math.abs(mean),3))hits.push({l,v,mean,diff})}
+    if(!hits.length)continue;
+    let cause,st='serious';const ratios=hits.map(h=>h.v/h.mean);
+    if(hits.every(h=>h.v===0)){cause='Mes sin movimientos: posible carga incompleta';st='fail'}
+    else if(hits.length>=3&&ratios.every(r=>r>1.6&&r<2.7)){cause='Valores al doble de lo habitual: posible carga duplicada';st='fail'}
+    else if(hits.some(h=>h.v*h.mean<0)){cause='Signo invertido: posible cuenta mal clasificada'}
+    else if(c.prod&&hits.some(h=>h.l==='ventas')){cause='Cambio de precio o volumen: ver análisis precio / volumen'}
+    else cause='Desviación inusual frente al mismo mes de otros años';
+    out.push({c,y,m,hits,cause,st})}
+  return out.sort((a,b)=>RANK[b.st==='serious'?'warn':b.st]-RANK[a.st==='serious'?'warn':a.st]||b.y-a.y||b.m-a.m)}
+
+/* precio / volumen */
+function priceVolume(sc,y){
+  const rows={};const comps=compsIn(sc).filter(c=>c.prod);if(!comps.length)return null;
+  for(const c of comps)for(const yy of [y-1,y])for(let m=0;m<S.cut;m++){const pm=PROD[c.id][yy][m];for(const p in pm){rows[p]=rows[p]||{p,t0:0,v0:0,t1:0,v1:0};if(yy===y){rows[p].t1+=pm[p].t;rows[p].v1+=pm[p].v}else{rows[p].t0+=pm[p].t;rows[p].v0+=pm[p].v}}}
+  const list=Object.values(rows).filter(r=>r.v0||r.v1).map(r=>{const p0=r.t0?r.v0/r.t0:0,p1=r.t1?r.v1/r.t1:0;
+    const vol=r.t0&&r.t1?(r.t1-r.t0)*p0:(r.v1-r.v0);const price=r.t0&&r.t1?(p1-p0)*r.t1:0;return {...r,p0,p1,vol,price}});
+  const tot=list.reduce((a,r)=>({vol:a.vol+r.vol,price:a.price+r.price,v0:a.v0+r.v0,v1:a.v1+r.v1}),{vol:0,price:0,v0:0,v1:0});
+  return {list:list.sort((a,b)=>Math.abs(b.vol+b.price)-Math.abs(a.vol+a.price)),tot}}
+
+function autoNote(sc,line,y,marker){
+  const parts=[];
+  if(line==='ventas'&&y>2022){const pv=priceVolume(sc,y);
+    if(pv&&Math.abs(pv.tot.v1-pv.tot.v0)>1){const top=pv.list[0];
+      parts.push(`Ventas de fruta ${pv.tot.v1>=pv.tot.v0?'suben':'bajan'} MM$ ${fmt(Math.abs(pv.tot.v1-pv.tot.v0))} frente a ${y-1}: efecto precio ${fmt(pv.tot.price)}, efecto volumen ${fmt(pv.tot.vol)}. `+
+        `Mayor impacto: ${PRODUCTS[top.p]} (precio ${fmt(top.price)}, volumen ${fmt(top.vol)}).`)}}
+  const ids=new Set(compsIn(sc).map(c=>c.id));
+  const an=ANOMS.filter(a=>ids.has(a.c.id)&&a.y===y&&a.hits.some(h=>h.l===line));
+  if(an.length)parts.push(`Incluye ${an.length} alerta(s) de carga: `+an.slice(0,3).map(a=>`${a.c.name}, ${MONTHS[a.m]} ${a.y} (${a.cause.split(':')[0].toLowerCase()})`).join('; ')+'.');
+  if(!marker&&S.elim&&sc.type!=='company'){const fl=FLOWS.filter(f=>ids.has(f.seller)&&ids.has(f.buyer)&&(f.sl===line||f.bl===line));
+    if(fl.length)parts.push(`Se eliminan operaciones entre empresas: ${fl.map(f=>f.concept.toLowerCase()).join(', ')}.`)}
+  return parts.join(' ')}
+
+let ANOMS=[];
+
+/* ---------- gráficos ---------- */
+let TIPS=[];
+const tipA=h=>{TIPS.push(h);return `data-ti="${TIPS.length-1}" tabindex="0"`};
+function niceTicks(mn,mx,n){if(mn===mx){mx=mn+1}const st0=(mx-mn)/n;const mag=Math.pow(10,Math.floor(Math.log10(st0)));const e=st0/mag;
+  const st=(e>=7.5?10:e>=3.5?5:e>=1.5?2:1)*mag;const lo=Math.floor(mn/st)*st,hi=Math.ceil(mx/st)*st;const t=[];for(let v=lo;v<=hi+st/2;v+=st)t.push(Math.round(v*1e6)/1e6);return t}
+function vbar(x,w,y0,y1,r){r=r??4;const h=Math.abs(y1-y0);if(h<.5)return '';r=Math.min(r,h,w/2);
+  return y1<y0?`M${x},${y0}V${y1+r}Q${x},${y1} ${x+r},${y1}H${x+w-r}Q${x+w},${y1} ${x+w},${y1+r}V${y0}Z`
+              :`M${x},${y0}V${y1-r}Q${x},${y1} ${x+r},${y1}H${x+w-r}Q${x+w},${y1} ${x+w},${y1-r}V${y0}Z`}
+function hbar(y,h,x0,x1,r){r=r??4;const w=Math.abs(x1-x0);if(w<.5)return '';r=Math.min(r,w,h/2);
+  return x1>x0?`M${x0},${y}H${x1-r}Q${x1},${y} ${x1},${y+r}V${y+h-r}Q${x1},${y+h} ${x1-r},${y+h}H${x0}Z`
+              :`M${x0},${y}H${x1+r}Q${x1},${y} ${x1},${y+r}V${y+h-r}Q${x1},${y+h} ${x1+r},${y+h}H${x0}Z`}
+
+function columnChart(items,label){
+  const W=520,H=230,L=58,Rr=12,T=22,B=28,iw=W-L-Rr,ih=H-T-B;
+  const vals=items.map(d=>d.value);const tk=niceTicks(Math.min(0,...vals),Math.max(0,...vals),4);const mn=tk[0],mx=tk[tk.length-1];
+  const y=v=>T+ih-(v-mn)/(mx-mn)*ih;const band=iw/items.length;const bw=Math.min(34,band*.45);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">`;
+  tk.forEach(t=>s+=`<line class="${t===0?'base':'grid'}" x1="${L}" x2="${W-Rr}" y1="${y(t)}" y2="${y(t)}"/><text class="tick" x="${L-8}" y="${y(t)+4}" text-anchor="end">${fmtAxis(t)}</text>`);
+  items.forEach((d,i)=>{const cx=L+band*i+band/2,last=i===items.length-1;
+    s+=`<g class="hitcol"><rect class="hit" x="${L+band*i+2}" y="${T}" width="${band-4}" height="${ih}" rx="6" ${tipA(`<b>${d.label}</b><br>${esc(label)}: MM$ ${fmt(d.value)}${d.sub?'<br>'+d.sub:''}`)} ${d.attr||''}/>`+
+      `<path class="${last?'bar':'bar-soft'}" d="${vbar(cx-bw/2,bw,y(0),y(d.value))}" pointer-events="none"/></g>`+
+      `<text class="tick" x="${cx}" y="${H-8}" text-anchor="middle">${d.label}</text>`;
+    if(last)s+=`<text class="val" x="${cx}" y="${d.value>=0?y(d.value)-7:y(d.value)+15}" text-anchor="middle">${fmt(d.value)}</text>`});
+  return s+'</svg>'}
+
+function hBarChart(items,label,curY){
+  const W=520,rowH=32,L=176,Rr=74,T=6;const H=T+rowH*items.length+24;
+  const all=items.flatMap(d=>[d.value,d.prev]);const tk=niceTicks(Math.min(0,...all),Math.max(0,...all),4);const mn=tk[0],mx=tk[tk.length-1];
+  const x=v=>L+(v-mn)/(mx-mn)*(W-L-Rr);
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">`;
+  tk.forEach(t=>s+=`<line class="${t===0?'base':'grid'}" x1="${x(t)}" x2="${x(t)}" y1="${T}" y2="${H-20}"/><text class="tick" x="${x(t)}" y="${H-5}" text-anchor="middle">${fmtAxis(t)}</text>`);
+  items.forEach((d,i)=>{const y0=T+i*rowH;const nm=d.label.length>24?d.label.slice(0,23)+'…':d.label;
+    s+=`<g class="row"><rect class="hit" x="0" y="${y0}" width="${W}" height="${rowH-2}" rx="6" ${d.attr||''} ${tipA(`<b>${esc(d.label)}</b><br>${curY}: MM$ ${fmt(d.value)}<br>${curY-1}: MM$ ${fmt(d.prev)}<br>Variación: ${pct(dpct(d.value,d.prev))}${d.flag?'<br>Controles: '+ST_LABEL[d.flag]:''}`)}/>`+
+      `<text class="lab" x="${L-10}" y="${y0+20}" text-anchor="end" pointer-events="none">${d.flag&&d.flag!=='ok'?(d.flag==='fail'?'✕ ':'! '):''}${esc(nm)}</text>`+
+      `<path class="bar" d="${hbar(y0+8,14,x(0),x(d.value))}" pointer-events="none"/>`+
+      `<line class="prevtick" x1="${x(d.prev)}" x2="${x(d.prev)}" y1="${y0+4}" y2="${y0+26}" pointer-events="none"/>`+
+      `<text class="val" x="${W-4}" y="${y0+20}" text-anchor="end" pointer-events="none">${fmt(d.value)}</text></g>`});
+  return s+'</svg>'}
+
+function lineChart(series,label,flags){
+  flags=flags||[];const W=520,H=230,L=58,Rr=14,T=16,B=28,iw=W-L-Rr,ih=H-T-B;
+  const all=series.flatMap(s=>s.values.filter(v=>v!=null));const tk=niceTicks(Math.min(0,...all),Math.max(0,...all),4);const mn=tk[0],mx=tk[tk.length-1];
+  const x=i=>L+i*iw/11,y=v=>T+ih-(v-mn)/(mx-mn)*ih;
+  let s=`<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(label)}">`;
+  tk.forEach(t=>s+=`<line class="${t===0?'base':'grid'}" x1="${L}" x2="${W-Rr}" y1="${y(t)}" y2="${y(t)}"/><text class="tick" x="${L-8}" y="${y(t)+4}" text-anchor="end">${fmtAxis(t)}</text>`);
+  MONTHS.forEach((m,i)=>s+=`<text class="tick" x="${x(i)}" y="${H-8}" text-anchor="middle">${m}</text>`);
+  series.forEach(se=>{let d='';se.values.forEach((v,i)=>{if(v==null)return;d+=(d?'L':'M')+x(i)+','+y(v)});s+=`<path class="${se.cls}" d="${d}"/>`});
+  for(let i=0;i<12;i++){const tip=`<b>${MONTHS_L[i]}</b><br>`+series.map(se=>`${se.name}: ${se.values[i]==null?'—':'MM$ '+fmt(se.values[i])}`).join('<br>')+(flags.includes(i)?'<br><b>Alerta de carga en este mes</b>':'');
+    s+=`<g class="hitcol"><line class="xh" x1="${x(i)}" x2="${x(i)}" y1="${T}" y2="${T+ih}"/>`+
+      series.map(se=>se.values[i]==null?'':`<circle class="dot" cx="${x(i)}" cy="${y(se.values[i])}" r="4" fill="var(--${se.cls==='ln1'?'s1':'s2'})" stroke="var(--surface)" stroke-width="2"/>`).join('')+
+      `<rect class="hit" x="${x(i)-iw/22}" y="${T}" width="${iw/11}" height="${ih}" ${tipA(tip)}/></g>`}
+  flags.forEach(i=>{const v=series[0].values[i];if(v==null)return;s+=`<g pointer-events="none"><circle class="flag" cx="${x(i)}" cy="${y(v)}" r="7"/><text class="flagtxt" x="${x(i)}" y="${y(v)+3.5}" text-anchor="middle">!</text></g>`});
+  return s+'</svg>'}
+
+function spark(vals){const W=110,H=28;const mn=Math.min(...vals),mx=Math.max(...vals);const x=i=>4+i*(W-8)/(vals.length-1),y=v=>H-4-(mx===mn?.5:(v-mn)/(mx-mn))*(H-8);
+  return `<svg width="${W}" height="${H}" aria-hidden="true"><path d="${vals.map((v,i)=>(i?'L':'M')+x(i)+','+y(v)).join('')}" fill="none" stroke="var(--s1)" stroke-width="2"/><circle cx="${x(vals.length-1)}" cy="${y(vals[vals.length-1])}" r="3" fill="var(--s1)"/></svg>`}
+function divbar(v,max){const w=max?Math.min(50,Math.abs(v)/max*50):0;return `<span class="divbar" aria-hidden="true"><span class="${v<0?'n':''}" style="${v<0?`right:50%;width:${w}%;background:var(--neg)`:`left:50%;width:${w}%;background:var(--pos)`}"></span></span>`}
+
+/* ---------- vistas ---------- */
+const view=document.getElementById('view');
+const cutLabel=()=>`ene–${MONTHS[S.cut-1].toLowerCase()}`;
+function crumbs(){const sc=S.scope;let h=`<div class="crumbs">`;
+  h+=sc.type==='group'?'<b>Grupo consolidado</b>':`<a data-scope="group:grupo">Grupo consolidado</a> ›`;
+  if(sc.type==='area')h+=` <b>${ABY[sc.id].name}</b>`;
+  if(sc.type==='company'){const c=CBY[sc.id];h+=` <a data-scope="area:${c.area}">${ABY[c.area].name}</a> › <b>${c.name}</b> <span class="pill">${ERPS[c.erp]}</span>`}
+  return h+`<span class="muted" style="margin-left:8px">Acumulado ${cutLabel()} de cada año · ${S.real?'valores reales en pesos de 2026':'valores nominales'}</span></div>`}
+
+function renderExec(){
+  const sc=S.scope;const st={};YEARS.forEach(y=>st[y]=ytd(sc,y));
+  const comps=compsIn(sc);const flagged=comps.filter(c=>companyStatus(c)!=='ok');
+  let h=crumbs();
+  if(flagged.length)h+=`<div class="alertbar">${stHTML('serious','')}<span><b>${flagged.length} empresa(s)</b> con controles pendientes en esta vista: ${flagged.map(c=>esc(c.name)).join(', ')}. Sus cifras se muestran, marcadas, hasta que se revisen.</span><a data-tab="ctrl">Ver controles →</a></div>`;
+  const K=[['ventas','Ventas'],['mb','Margen bruto'],['ro','Resultado operacional'],['ebitda','EBITDA'],['rai','Resultado antes de impuesto']];
+  h+='<div class="tiles">'+K.map(([k,n])=>{const v=st[CUR][k],p=st[CUR-1][k],d=dpct(v,p);const sub=k==='mb'||k==='ebitda'||k==='ro'?` <small>${pct(st[CUR][k+'p'])}</small>`:'';
+    return `<div class="tile" data-cell="${k}|${CUR}" role="button" tabindex="0"><div class="lbl">${n} ${CUR}</div><div class="val">${fmt(v)}${sub}</div>
+    <div class="dl ${d>=0?'up':'down'}">${d>=0?'▲':'▼'} ${pct(Math.abs(d))} <span class="muted">vs ${CUR-1}</span></div>${spark(YEARS.map(y=>st[y][k]))}</div>`}).join('')+'</div>';
+  h+='<div class="grid2">';
+  h+=`<div class="card"><h2>EBITDA por año · ${cutLabel()}</h2><p class="hint">Mismo período de cada año. Pase el cursor o haga clic en una barra.</p>${columnChart(YEARS.map(y=>({label:String(y),value:st[y].ebitda,sub:'Margen EBITDA '+pct(st[y].ebitdap),attr:`data-cell="ebitda|${y}"`})),'EBITDA')}</div>`;
+  if(sc.type!=='company'){
+    const ch=children(sc);const items=ch.map(c=>{const a=ytd(c,CUR),b=ytd(c,CUR-1);const fl=c.type==='company'?companyStatus(CBY[c.id]):(compsIn(c).some(x=>companyStatus(x)!=='ok')?'warn':'ok');
+      return {label:scopeName(c),value:a.ebitda,prev:b.ebitda,attr:`data-scope="${scopeKey(c)}"`,flag:fl}});
+    h+=`<div class="card"><h2>EBITDA ${CUR} por ${sc.type==='group'?'área':'empresa'}</h2><p class="hint">Haga clic en una fila para bajar al detalle.</p>
+      <div class="legend"><span><i class="sq" style="background:var(--s1)"></i>${CUR}</span><span><i class="tk"></i>${CUR-1}</span><span>✕ / ! controles pendientes</span></div>${hBarChart(items,'EBITDA por '+(sc.type==='group'?'área':'empresa'),CUR)}</div>`;
+  }else{
+    const a=[],b=[];for(let m=0;m<12;m++){a.push(m<S.cut?sumRange(sc,CUR,m,m+1).ebitda:null);b.push(sumRange(sc,CUR-1,m,m+1).ebitda)}
+    const flags=ANOMS.filter(x=>x.c.id===sc.id&&x.y===CUR).map(x=>x.m);
+    h+=`<div class="card"><h2>EBITDA mensual</h2><p class="hint">Meses con alerta de carga marcados con !</p><div class="legend"><span><i style="background:var(--s1)"></i>${CUR}</span><span><i style="background:var(--s2)"></i>${CUR-1}</span></div>${lineChart([{name:String(CUR),cls:'ln1',values:a},{name:String(CUR-1),cls:'ln2',values:b}],'EBITDA mensual',flags)}</div>`}
+  h+='</div>';
+  /* estado de resultados */
+  const ys=[...YEARS].reverse();
+  h+=`<div class="card" style="margin-bottom:14px"><h2>Estado de resultados · ${esc(scopeName(sc))}</h2><p class="hint">Haga clic en cualquier cifra para ver de dónde viene, su evolución mensual y las explicaciones. El triángulo naranjo indica una explicación guardada.</p><div class="tablewrap"><table>
+    <thead><tr><th>MM$</th>${ys.map(y=>`<th>${y}</th>`).join('')}<th>Var. ${CUR}/${CUR-1}</th></tr></thead><tbody>`;
+  for(const r of ROWS){
+    if(r.p){h+=`<tr class="pct"><td class="ind">${r.n}</td>${ys.map(y=>`<td>${pct(st[y][r.k])}</td>`).join('')}<td></td></tr>`;continue}
+    const d=dpct(st[CUR][r.k],st[CUR-1][r.k]);
+    h+=`<tr class="${r.t===2?'t2':r.t?'t1':''}"><td class="${r.ind?'ind':''}">${r.n}</td>${ys.map(y=>{const key=`${scopeKey(sc)}|${r.k}|${y}`;const has=(NOTES[key]&&NOTES[key].length)||(y===CUR&&autoNote(sc,r.k,y,true));
+      return `<td class="cell ${has?'note':''} ${y===CUR?'cur':''}" data-cell="${r.k}|${y}" tabindex="0">${fmt(st[y][r.k])}</td>`}).join('')}<td class="${d>=0?'up':'down'}">${isFinite(d)?(d>=0?'▲ ':'▼ ')+pct(Math.abs(d)):'—'}</td></tr>`}
+  h+='</tbody></table></div></div>';
+  if(sc.type!=='company'){
+    const ch=children(sc);
+    h+=`<div class="card"><h2>${sc.type==='group'?'Áreas':'Empresas'} · ${CUR} ${cutLabel()}</h2><p class="hint">Haga clic en una fila para abrirla.</p><div class="tablewrap"><table><thead><tr><th>${sc.type==='group'?'Área':'Empresa'}</th>${sc.type==='area'?'<th>ERP</th>':'<th>Empresas</th>'}<th>Ventas</th><th>Margen bruto %</th><th>EBITDA</th><th>EBITDA ${CUR-1}</th><th>Var.</th><th>Controles</th></tr></thead><tbody>`+
+      ch.map(c=>{const a=ytd(c,CUR),b=ytd(c,CUR-1);const d=dpct(a.ebitda,b.ebitda);const fl=c.type==='company'?companyStatus(CBY[c.id]):compsIn(c).reduce((w,x)=>{const s=companyStatus(x);return RANK[s]>RANK[w]?s:w},'ok');
+        return `<tr class="clk" data-scope="${scopeKey(c)}" tabindex="0"><td>${esc(scopeName(c))}</td><td>${c.type==='company'?ERPS[CBY[c.id].erp]:compsIn(c).length}</td><td>${fmt(a.ventas)}</td><td>${pct(a.mbp)}</td><td>${fmt(a.ebitda)}</td><td>${fmt(b.ebitda)}</td><td class="${d>=0?'up':'down'}">${isFinite(d)?(d>=0?'▲ ':'▼ ')+pct(Math.abs(d)):'—'}</td><td>${stHTML(fl,ST_LABEL[fl])}</td></tr>`}).join('')+'</tbody></table></div></div>'}
+  return h}
+
+let loadLog='';const LOADS={softland:'11-11-2026 07:30',agrosoft:'11-11-2026 07:34',inet:'11-11-2026 07:41'};
+function renderCtrl(){
+  let h=`<div class="erpcards">`+Object.keys(ERPS).map(e=>{const cs=COMPANIES.filter(c=>c.erp===e);const bad=cs.filter(c=>companyStatus(c)!=='ok').length;
+    return `<div class="card"><h3>${ERPS[e]}</h3><div class="meta">${cs.length} empresas · ${ERP_SRC[e]}</div><div class="meta">Última carga: ${LOADS[e]}</div><div style="margin-top:8px">${bad?stHTML('warn',bad+' empresa(s) por revisar'):stHTML('ok','Todo cuadra')}</div></div>`}).join('')+`</div>`;
+  h+=`<div class="card" style="margin-bottom:14px"><h2>Controles en cada carga</h2><p class="hint">Se ejecutan solos cada vez que se cargan datos. Una empresa que no cuadra queda marcada en la vista ejecutiva.</p>
+    <button class="btn primary" id="runLoad">Simular nueva carga</button><div class="log" id="log" ${loadLog?'':'hidden'}>${esc(loadLog)}</div></div>`;
+  const keys=['per','dup','may','map','sig'];const labels=controlsFor(COMPANIES[0]).map(x=>x.label);
+  h+=`<div class="card" style="margin-bottom:14px"><div class="tablewrap"><table><thead><tr><th>Empresa</th><th>Área</th><th>ERP</th>${labels.map(l=>`<th>${l}</th>`).join('')}<th>Estado</th></tr></thead><tbody>`+
+    COMPANIES.map(c=>{const cs=controlsFor(c);const s=companyStatus(c);return `<tr class="clk" data-scope="company:${c.id}" data-gotab="exec"><td>${esc(c.name)}</td><td>${ABY[c.area].name}</td><td>${ERPS[c.erp]}</td>${cs.map(x=>`<td style="text-align:center">${x.st==='ok'?'<span class="st ok"><span class="ic">✓</span></span>':stHTML(x.st,x.st==='fail'?'No':'Revisar')}</td>`).join('')}<td>${stHTML(s,ST_LABEL[s])}</td></tr>`}).join('')+'</tbody></table></div></div>';
+  const issues=COMPANIES.flatMap(c=>controlsFor(c).filter(x=>x.st!=='ok').map(x=>({c,x})));
+  h+=`<div class="card"><h2>Detalle de lo que no cuadra</h2><ul>`+(issues.length?issues.map(({c,x})=>`<li style="margin:6px 0">${stHTML(x.st,'')} <b>${esc(c.name)}</b> · ${x.label}: ${esc(x.detail)} ${x.k==='map'||x.k==='may'?'<a class="small" style="color:var(--s1);cursor:pointer" data-tab="acc">Asignar cuentas →</a>':''}</li>`).join(''):'<li>Sin observaciones.</li>')+'</ul></div>';
+  return h}
+
+function renderAnom(){
+  let h=`<div class="card" style="margin-bottom:14px"><h2>Alertas detectadas · ${CUR-1} y ${CUR} (hasta ${MONTHS_L[S.cut-1]})</h2><p class="hint">Cada mes se compara con el mismo mes de los otros años de la misma empresa. Se marcan las diferencias grandes y se sugiere una causa probable.</p>
+    <div class="tablewrap"><table><thead><tr><th>Empresa</th><th>Mes</th><th>Líneas afectadas</th><th>Registrado</th><th>Habitual</th><th>Causa probable</th><th></th></tr></thead><tbody>`+
+    (ANOMS.length?ANOMS.map(a=>{const h0=a.hits[0];return `<tr><td>${esc(a.c.name)}</td><td>${MONTHS[a.m]} ${a.y}</td><td>${a.hits.map(x=>RN[x.l]).slice(0,3).join(', ')}${a.hits.length>3?` y ${a.hits.length-3} más`:''}</td><td>${fmt(h0.v)}</td><td>${fmt(h0.mean)}</td><td>${stHTML(a.st==='fail'?'fail':'serious',a.cause)}</td>
+      <td><button class="btn" data-goto="${a.c.id}|${h0.l}|${a.y}">Ver cifra</button></td></tr>`}).join(''):'<tr><td colspan="7">Sin alertas.</td></tr>')+'</tbody></table></div></div>';
+  const pcs=COMPANIES.filter(c=>c.prod);
+  h+=`<div class="card"><h2>Análisis precio / volumen · ventas de fruta ${CUR} vs ${CUR-1} (${cutLabel()})</h2><p class="hint">Se calcula solo con los kilos y montos que entrega el ERP. Azul: aumenta las ventas. Rojo: las reduce.</p>`;
+  for(const c of [{type:'group',id:'grupo',n:'Total fruta del grupo'},...pcs.map(c=>({type:'company',id:c.id,n:c.name}))]){
+    const pv=priceVolume(c,CUR);if(!pv)continue;const mx=Math.max(...pv.list.flatMap(r=>[Math.abs(r.vol),Math.abs(r.price)]),1);
+    h+=`<h3 style="font-size:13.5px;margin:16px 0 6px">${esc(c.n)} <span class="muted small">· variación MM$ ${fmt(pv.tot.v1-pv.tot.v0)} = precio ${fmt(pv.tot.price)} + volumen ${fmt(pv.tot.vol)}</span></h3><div class="tablewrap"><table><thead><tr><th>Producto</th><th>Ton ${CUR-1}</th><th>Ton ${CUR}</th><th>MM$/ton ${CUR-1}</th><th>MM$/ton ${CUR}</th><th style="text-align:center">Efecto volumen</th><th style="text-align:center">Efecto precio</th></tr></thead><tbody>`+
+      pv.list.map(r=>`<tr><td>${PRODUCTS[r.p]}</td><td>${fmt(r.t0)}</td><td>${fmt(r.t1)}</td><td>${r.p0.toFixed(2).replace('.',',')}</td><td>${r.p1.toFixed(2).replace('.',',')}</td><td>${divbar(r.vol,mx)} ${fmt(r.vol)}</td><td>${divbar(r.price,mx)} ${fmt(r.price)}</td></tr>`).join('')+'</tbody></table></div>'}
+  return h+'</div>'}
+
+function renderIC(){
+  const g={type:'group',id:'grupo'};const a=sumRange(g,CUR,0,S.cut,{...S,elim:false}),b=sumRange(g,CUR,0,S.cut,{...S,elim:true});
+  let h=`<div class="tiles" style="grid-template-columns:repeat(3,1fr)"><div class="tile"><div class="lbl">Ventas sumando las 16 empresas</div><div class="val">${fmt(a.ventas)}</div></div>
+    <div class="tile"><div class="lbl">Ventas consolidadas (sin operaciones internas)</div><div class="val">${fmt(b.ventas)}</div></div>
+    <div class="tile"><div class="lbl">Diferencia que inflaría el consolidado</div><div class="val">${fmt(a.ventas-b.ventas)} <small>${pct((a.ventas-b.ventas)/b.ventas)}</small></div></div></div>`;
+  h+=`<div class="card"><h2>Operaciones entre empresas del grupo · ${CUR} ${cutLabel()}</h2><p class="hint">El ingreso de una empresa es el costo de otra. Con «Eliminar» activo (arriba), se descuentan en las vistas que incluyen a ambas empresas; el EBITDA del grupo no cambia, pero ventas y costos dejan de estar inflados.</p>
+    <div class="tablewrap"><table><thead><tr><th>Concepto</th><th>Empresa que cobra</th><th>Línea</th><th>Empresa que paga</th><th>Línea</th><th>MM$</th></tr></thead><tbody>`+
+    FLOWS.map(f=>{let t=0;for(let m=0;m<S.cut;m++)t+=f.amt(CUR,m);if(S.real)t*=IPC[CUR];return `<tr><td>${f.concept}</td><td>${CBY[f.seller].name}</td><td>${RN[f.sl]}</td><td>${CBY[f.buyer].name}</td><td>${RN[f.bl]}</td><td>${fmt(t)}</td></tr>`}).join('')+'</tbody></table></div></div>';
+  return h}
+
+let accFilter='all';
+function renderAcc(){
+  const un=UNMAPPED;
+  let h=`<div class="card" style="margin-bottom:14px"><h2>Cuentas del ERP sin línea asignada</h2><p class="hint">Mientras no se asignen, su monto no entra al resumen y la empresa queda marcada como «no cuadra». Asigne una línea y vea cómo cambian el control y las cifras.</p>
+    <div class="tablewrap"><table><thead><tr><th>Empresa</th><th>ERP</th><th>Código</th><th>Cuenta en el ERP</th><th>Mes</th><th>MM$</th><th>Línea del resumen</th></tr></thead><tbody>`+
+    un.map((u,i)=>`<tr class="${u.line?'':'unm'}"><td>${CBY[u.c].name}</td><td>${ERPS[CBY[u.c].erp]}</td><td>${u.code}</td><td>${u.name}</td><td>${MONTHS[u.m]} ${u.y}</td><td>${fmt(u.amt)}</td>
+      <td><select data-assign="${i}"><option value="">Sin asignar</option>${BASE.map(l=>`<option value="${l}" ${u.line===l?'selected':''}>${RN[l]}</option>`).join('')}</select></td></tr>`).join('')+'</tbody></table></div></div>';
+  h+=`<div class="card"><h2>Tabla de equivalencia de cuentas</h2><p class="hint">Cada ERP tiene su propio plan de cuentas. Esta tabla lleva cada cuenta a una línea común del resumen.</p>
+    <label class="small">ERP <select id="accF"><option value="all">Todos</option>${Object.keys(ERPS).map(e=>`<option value="${e}" ${accFilter===e?'selected':''}>${ERPS[e]}</option>`).join('')}</select></label>
+    <div class="tablewrap" style="max-height:460px;overflow:auto;margin-top:8px"><table><thead><tr><th>Empresa</th><th>ERP</th><th>Código</th><th>Cuenta en el ERP</th><th>Línea del resumen</th></tr></thead><tbody>`+
+    COMPANIES.filter(c=>accFilter==='all'||c.erp===accFilter).flatMap(c=>BASE.flatMap(l=>ACCOUNTS[c.id][l].map(a=>`<tr><td>${c.name}</td><td>${ERPS[c.erp]}</td><td>${a.code}</td><td>${a.name}</td><td>${RN[l]}</td></tr>`))).join('')+'</tbody></table></div></div>';
+  return h}
+
+/* ---------- panel de detalle ---------- */
+const drawer=document.getElementById('drawer');let drawerCtx=null;
+function openDetail(line,y){
+  drawerCtx={line,y:+y};const sc=S.scope;const cur=sumRange(sc,y,0,S.cut),prev=y>2022?sumRange(sc,y-1,0,S.cut):null;
+  const v=cur[line],p=prev?prev[line]:null,d=prev?dpct(v,p):NaN;
+  let h=`<button class="btn x" id="dClose" aria-label="Cerrar">✕</button><h2>${RN[line]} · ${esc(scopeName(sc))}</h2><div class="muted small">${y} · ${cutLabel()} · ${S.real?'reales':'nominales'}</div>
+    <div class="big">MM$ ${fmt(v)}</div>${prev?`<div class="${d>=0?'up':'down'} small">${d>=0?'▲':'▼'} ${pct(Math.abs(d))} (MM$ ${fmt(v-p)}) vs ${y-1}</div>`:''}`;
+  /* composición */
+  let rows=[],title='';
+  if(sc.type!=='company'){title=sc.type==='group'?'Por área':'Por empresa';rows=children(sc).map(c=>{const a=sumRange(c,y,0,S.cut)[line],b=prev?sumRange(c,y-1,0,S.cut)[line]:0;return {n:scopeName(c),a,b,attr:`data-scope="${scopeKey(c)}" data-keep="${line}|${y}"`}})}
+  else if(BASE.includes(line)){title='Cuentas del ERP que forman la cifra';const ra=accountRows(sc.id,line,y),rb=prev?accountRows(sc.id,line,y-1):[];rows=ra.map(r=>({n:`${r.code} · ${r.name}`,a:r.v,b:(rb.find(x=>x.code===r.code)||{v:0}).v}))}
+  else{title='Componentes';rows=COMPONENTS[line].map(k=>({n:RN[k],a:cur[k],b:prev?prev[k]:0,attr:`data-cell="${k}|${y}"`}))}
+  const mx=Math.max(...rows.map(r=>Math.abs(r.a-r.b)),1);
+  h+=`<section><h3>${title}</h3><div class="tablewrap"><table><thead><tr><th></th><th>${y}</th>${prev?`<th>${y-1}</th><th style="text-align:center">Cambio</th>`:''}</tr></thead><tbody>`+
+    rows.map(r=>`<tr class="${r.attr?'clk':''}" ${r.attr||''}><td style="white-space:normal">${esc(r.n)}</td><td>${fmt(r.a)}</td>${prev?`<td>${fmt(r.b)}</td><td>${divbar(r.a-r.b,mx)} ${fmt(r.a-r.b)}</td>`:''}</tr>`).join('')+'</tbody></table></div></section>';
+  /* mensual */
+  const a=[],b=[];for(let m=0;m<12;m++){a.push(y===CUR&&m>=LASTCLOSE?null:sumRange(sc,y,m,m+1)[line]);b.push(y>2022?sumRange(sc,y-1,m,m+1)[line]:null)}
+  const ids=new Set(compsIn(sc).map(c=>c.id));const flags=[...new Set(ANOMS.filter(x=>ids.has(x.c.id)&&x.y===y&&(x.hits.some(hh=>hh.l===line)||!BASE.includes(line))).map(x=>x.m))];
+  h+=`<section><h3>Mes a mes</h3><div class="legend"><span><i style="background:var(--s1)"></i>${y}</span>${y>2022?`<span><i style="background:var(--s2)"></i>${y-1}</span>`:''}</div>${lineChart(y>2022?[{name:String(y),cls:'ln1',values:a},{name:String(y-1),cls:'ln2',values:b}]:[{name:String(y),cls:'ln1',values:a}],RN[line]+' mensual',flags)}</section>`;
+  /* precio-volumen */
+  if(line==='ventas'&&y>2022){const pv=priceVolume(sc,y);if(pv){const m2=Math.max(...pv.list.flatMap(r=>[Math.abs(r.vol),Math.abs(r.price)]),1);
+    h+=`<section><h3>Precio y volumen (fruta)</h3><table><thead><tr><th>Producto</th><th style="text-align:center">Volumen</th><th style="text-align:center">Precio</th></tr></thead><tbody>`+pv.list.map(r=>`<tr><td>${PRODUCTS[r.p]}</td><td>${divbar(r.vol,m2)} ${fmt(r.vol)}</td><td>${divbar(r.price,m2)} ${fmt(r.price)}</td></tr>`).join('')+'</tbody></table></section>'}}
+  /* explicaciones */
+  const key=`${scopeKey(sc)}|${line}|${y}`;const auto=autoNote(sc,line,y);
+  h+=`<section><h3>Explicación</h3>${auto?`<div class="note-auto"><b>Generada a partir de los datos:</b> ${esc(auto)}</div>`:'<div class="muted small">Sin explicación automática para esta cifra.</div>'}
+    ${(NOTES[key]||[]).map(n=>`<div class="note-user">${esc(n.t)}<br><small>${n.d}</small></div>`).join('')}
+    <textarea id="noteTxt" placeholder="Agregar explicación del analista (queda unida a esta cifra y este año)"></textarea><div style="margin-top:6px"><button class="btn primary" id="noteSave">Guardar explicación</button></div></section>`;
+  drawer.innerHTML=h;bindTips(drawer);drawer.classList.add('open');drawer.setAttribute('aria-hidden','false');drawer.focus();
+  document.getElementById('dClose').onclick=closeDetail;
+  document.getElementById('noteSave').onclick=()=>{const t=document.getElementById('noteTxt').value.trim();if(!t)return;(NOTES[key]=NOTES[key]||[]).push({t,d:new Date().toLocaleString('es-CL')});saveNotes();openDetail(line,y);render(false)};
+}
+function closeDetail(){drawer.classList.remove('open');drawer.setAttribute('aria-hidden','true');drawerCtx=null}
+
+/* ---------- render y eventos ---------- */
+const tip=document.getElementById('tip');
+function showTip(html,x,y){tip.innerHTML=html;tip.hidden=false;const w=tip.offsetWidth,hh=tip.offsetHeight;tip.style.left=Math.min(x+14,innerWidth-w-8)+'px';tip.style.top=Math.min(y+14,innerHeight-hh-8)+'px'}
+function bindTips(root){root.querySelectorAll('[data-ti]').forEach(n=>{const h=TIPS[n.dataset.ti];
+  n.addEventListener('mousemove',e=>showTip(h,e.clientX,e.clientY));n.addEventListener('mouseleave',()=>tip.hidden=true);
+  n.addEventListener('focus',()=>{const r=n.getBoundingClientRect();showTip(h,r.left+r.width/2,r.top)});n.addEventListener('blur',()=>tip.hidden=true)})}
+
+const TABS=[['exec','Vista ejecutiva'],['ctrl','Controles de carga'],['anom','Alertas y variaciones'],['ic','Entre empresas'],['acc','Cuentas']];
+function render(closeDrawer){
+  if(closeDrawer!==false)closeDetail();
+  TIPS=[];ANOMS=detectAnomalies();
+  const nCtrl=COMPANIES.filter(c=>companyStatus(c)!=='ok').length;
+  document.getElementById('tabs').innerHTML=TABS.map(([k,n])=>`<button role="tab" aria-selected="${S.tab===k}" data-tab="${k}">${n}${k==='ctrl'&&nCtrl?`<span class="count">${nCtrl}</span>`:''}${k==='anom'&&ANOMS.length?`<span class="count">${ANOMS.length}</span>`:''}</button>`).join('');
+  view.innerHTML=S.tab==='exec'?renderExec():S.tab==='ctrl'?renderCtrl():S.tab==='anom'?renderAnom():S.tab==='ic'?renderIC():renderAcc();
+  bindTips(view);
+  document.getElementById('fScope').value=scopeKey(S.scope);
+  document.querySelectorAll('#fReal button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===+S.real)));
+  document.querySelectorAll('#fElim button').forEach(b=>b.setAttribute('aria-pressed',String(+b.dataset.v===+S.elim)));
+  const rl=document.getElementById('runLoad');if(rl)rl.onclick=simulateLoad;
+  const af=document.getElementById('accF');if(af)af.onchange=e=>{accFilter=e.target.value;render()};
+  view.querySelectorAll('[data-assign]').forEach(s=>s.onchange=e=>{UNMAPPED[+s.dataset.assign].line=e.target.value||null;render()});
+  if(drawerCtx)openDetail(drawerCtx.line,drawerCtx.y);
+}
+function parseScope(s){const [type,id]=s.split(':');return {type,id}}
+document.addEventListener('click',e=>{
+  const t=e.target.closest('[data-tab],[data-scope],[data-cell],[data-goto]');if(!t)return;
+  if(t.dataset.goto){const [cid,l,y]=t.dataset.goto.split('|');S.tab='exec';S.scope={type:'company',id:cid};render();openDetail(l,+y);return}
+  if(t.dataset.tab){S.tab=t.dataset.tab;render();return}
+  if(t.dataset.scope){S.scope=parseScope(t.dataset.scope);if(t.dataset.gotab)S.tab=t.dataset.gotab;const keep=t.dataset.keep;render();if(keep){const [l,y]=keep.split('|');openDetail(l,+y)}return}
+  if(t.dataset.cell){const [l,y]=t.dataset.cell.split('|');openDetail(l,+y)}
+});
+document.addEventListener('keydown',e=>{if(e.key==='Escape')closeDetail();if((e.key==='Enter'||e.key===' ')&&e.target.matches('[data-cell],[data-scope]')){e.preventDefault();e.target.click()}});
+
+function simulateLoad(){
+  const btn=document.getElementById('runLoad');btn.disabled=true;const log=document.getElementById('log');log.hidden=false;loadLog='';
+  const now=new Date();const hh=String(now.getHours()).padStart(2,'0')+':'+String(now.getMinutes()).padStart(2,'0');
+  const steps=[];
+  for(const e of Object.keys(ERPS)){const cs=COMPANIES.filter(c=>c.erp===e);steps.push(`${ERPS[e]}: leyendo ${cs.length} empresas (${ERP_SRC[e].toLowerCase()})… ${nf0.format(cs.length*(2400+Math.round(R()*900)))} movimientos`)}
+  steps.push('Llevando cada cuenta a su línea común con la tabla de equivalencia…');
+  steps.push('Revisando períodos completos y cargas duplicadas…');
+  steps.push('Cuadrando cada empresa contra el mayor de su ERP…');
+  steps.push('Comparando cada mes con el mismo mes de otros años…');
+  const bad=COMPANIES.filter(c=>companyStatus(c)!=='ok');
+  steps.push(bad.length?`Listo. ${16-bad.length} empresas cuadran; ${bad.length} quedan marcadas para revisión: ${bad.map(c=>c.name).join(', ')}.`:'Listo. Las 16 empresas cuadran.');
+  let i=0;const tick=()=>{if(i>=steps.length){btn.disabled=false;for(const e in LOADS)LOADS[e]=now.toLocaleDateString('es-CL')+' '+hh;render();return}loadLog+=(loadLog?'\n':'')+steps[i++];log.textContent=loadLog;log.scrollTop=log.scrollHeight;setTimeout(tick,420)};tick()}
+
+/* filtros */
+(function init(){
+  const fs=document.getElementById('fScope');
+  fs.innerHTML=`<option value="group:grupo">Grupo consolidado</option>`+AREAS.map(a=>`<optgroup label="${a.name}"><option value="area:${a.id}">${a.name} (área)</option>${COMPANIES.filter(c=>c.area===a.id).map(c=>`<option value="company:${c.id}">${c.name}</option>`).join('')}</optgroup>`).join('');
+  fs.onchange=e=>{S.scope=parseScope(e.target.value);S.tab='exec';render()};
+  const fc=document.getElementById('fCut');fc.innerHTML=MONTHS.slice(0,LASTCLOSE).map((m,i)=>`<option value="${i+1}" ${i+1===S.cut?'selected':''}>Enero a ${MONTHS_L[i]}</option>`).join('');
+  fc.onchange=e=>{S.cut=+e.target.value;render()};
+  document.querySelectorAll('#fReal button').forEach(b=>b.onclick=()=>{S.real=b.dataset.v==='1';render()});
+  document.querySelectorAll('#fElim button').forEach(b=>b.onclick=()=>{S.elim=b.dataset.v==='1';render()});
+  const q=new URLSearchParams(location.hash.slice(1));
+  if(q.get('tab'))S.tab=q.get('tab');if(q.get('scope'))S.scope=parseScope(q.get('scope'));
+  render();
+  if(q.get('cell')){const [l,y]=q.get('cell').split('|');openDetail(l,+y)}
+})();
+</script>
+</body>
+</html>
